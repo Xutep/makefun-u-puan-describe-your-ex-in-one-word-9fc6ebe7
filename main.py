@@ -44,9 +44,19 @@ def validate(word: str) -> str:
 
 def main() -> int:
     word = validate(WORD)
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    with open(OUTPUT_PATH, "w", encoding="utf-8", newline="") as handle:
+    directory = os.path.dirname(OUTPUT_PATH)
+    os.makedirs(directory, exist_ok=True)
+    # Write atomically: a partial write must never leave a bad entry
+    # behind, so write to a temp file in the same directory and rename.
+    tmp_path = os.path.join(directory, ".entry.txt.tmp")
+    with open(tmp_path, "w", encoding="utf-8", newline="") as handle:
         handle.write(word)
+    os.replace(tmp_path, OUTPUT_PATH)
+    # Verify what landed on disk is exactly the validated word.
+    with open(OUTPUT_PATH, "r", encoding="utf-8", newline="") as handle:
+        if handle.read() != word:
+            raise ValueError("written entry does not match the validated word")
+    print(f"entry: {word} ({len(word)} characters)")
     return 0
 
 
